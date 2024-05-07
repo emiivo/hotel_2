@@ -1,3 +1,6 @@
 [submodule "cars"]
 	path = cars
 	url = https://github.com/RafalKLab/CarRegistryRestApi.git
+[submodule "CarRegistryRestApi"]
+	path = CarRegistryRestApi
+	url = https://github.com/RafalKLab/CarRegistryRestApi.git
