@@ -1,0 +1,3 @@
+[submodule "cars"]
+	path = cars
+	url = https://github.com/RafalKLab/CarRegistryRestApi.git

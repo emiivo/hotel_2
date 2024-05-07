@@ -1,0 +1,16 @@
+version: '3'
+
+services:
+  hotel:
+    container_name: library
+    build: .
+    ports:
+      - "80:80"
+    volumes:
+      - .:/code
+
+  contacts:
+    container_name: contacts
+    build: ./contacts
+    ports:
+      - "5000:5000"
