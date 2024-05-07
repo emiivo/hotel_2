@@ -17,7 +17,7 @@ def get_all_contacts_route():
 def get_resident_contacts(resident_id):
     resident = hotel.get_resident_by_id(resident_id)
     if resident:
-        resident_contacts = get_contacts(resident_id)
+        resident_contacts = get_contacts(resident.id)
         
         if 'error' in resident_contacts:
             if '404 Client Error' in resident_contacts['error']:
@@ -142,38 +142,38 @@ def get_resident_by_id(resident_id):
     else:
         return jsonify({'error': 'Resident not found'}), 404
 
-# Add a resident
 @app.route('/residents', methods=['POST'])
 def add_resident():
-    data = request.json
-    name = data.get('name')
-    surname = data.get('surname')
-    room_id = data.get('room_id')
+	data = request.json
+	name = data.get('name')
+	surname = data.get('surname')
+	room_id = data.get('room_id')
 
-    # Check if the room has enough space
-    room = next((room for room in hotel.rooms if room.id == room_id), None)
-    if room:
-        if len(room.lives_here) >= room.size:
-            return jsonify({'error': 'Room is already full.'}), 400
+	# Check if the room has enough space
+	room = next((room for room in hotel.rooms if room.id == room_id), None)
+	if room:
+		if len(room.lives_here) >= room.size:
+			return jsonify({'error': 'Room is already full.'}), 400
 
-        try:
-            success = hotel.move_in_new_resident(name, surname, room_id)
-            
-            contacts = get_contacts(resident_id)
-            if 'error' not in contacts:
-                data['contacts'] = contacts
-            
-            response_data = {
-                'resident': data,
-                'message': 'Resident added to room successfully'
-            }
-            return jsonify(response_data), 200
-        except ValueError as e:
-            return jsonify({'error': str(e)}), 404
+		# Call method to add resident
+		try:
+			success = hotel.move_in_new_resident(name, surname, room_id)
+			# Construct response with added resident information
+			response_data = {
+				'resident': {
+					'name': name,
+					'surname': surname,
+					'room_id': room_id
+				},
+				'message': 'Resident added to room successfully'
+			}
+			return jsonify(response_data), 200
+		except ValueError as e:
+			return jsonify({'error': str(e)}), 404
     
-    else:
-        return jsonify({'error': f'Room with ID {room_id} not found'}), 404
-        
+	else:
+		return jsonify({'error': f'Room with ID {room_id} not found'}), 404
+
 # Add a room
 @app.route('/rooms', methods=['POST'])
 def add_room():
@@ -194,7 +194,7 @@ def update_room(room_id):
     new_price = data.get('new_price')
     new_size = data.get('new_size')
     
-    person_in_room = hotel.get_person_in_room(room_id)
+    person_in_room = hotel.get_resident_by_id(room_id)
     
     # Check if a person is assigned to the room
     if person_in_room:
