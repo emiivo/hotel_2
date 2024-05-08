@@ -2,7 +2,7 @@ version: '3'
 
 services:
   hotel:
-    container_name: library
+    container_name: hotel
     build: .
     ports:
       - "80:80"
