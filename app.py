@@ -17,7 +17,7 @@ def get_all_contacts_route():
 def get_resident_contacts(resident_id):
     resident = hotel.get_resident_by_id(resident_id)
     if resident:
-        resident_contacts = get_contacts(resident.id)
+        resident_contacts = get_contacts(resident_id)
         
         if 'error' in resident_contacts:
             if '404 Client Error' in resident_contacts['error']:
