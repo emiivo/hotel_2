@@ -10,7 +10,7 @@ hotel = Hotel()
 def get_all_contacts_route():
     all_contacts = get_all_contacts()
     
-    return jsonify({'contacts': all_contacts})
+    return jsonify({'contacts': all_contacts}), 200
 
 # Get a specific contact by resident's id
 @app.route('/contacts/residents/<int:resident_id>', methods=['GET'])
@@ -25,7 +25,7 @@ def get_resident_contacts(resident_id):
             else:
                 return jsonify({'error': resident_contacts['error']}), 500
                 
-        return jsonify({'id': resident_id, 'contacts': resident_contacts})
+        return jsonify({'id': resident_id, 'contacts': resident_contacts}), 200
     return jsonify({'error': 'Resident not found'}), 404
 
 # Add a contact - not specific to resident, only shown in "get all contacts"
@@ -42,7 +42,7 @@ def create_contact_route():
     
     return response, 201
     
-# Add contacts to a resident    
+# Add contacts to a resident
 @app.route('/contacts/residents/<int:resident_id>', methods=['POST'])
 def add_resident_contact(resident_id):
     resident_data = hotel.get_resident_by_id(resident_id)
@@ -60,47 +60,34 @@ def add_resident_contact(resident_id):
             return jsonify({'error': response['error']}), 500
             
         else:
-            return jsonify({'message': 'Contact added successfully'}), 201
+            return jsonify({'message': f'Contact added successfully to resident {resident_id}'}), 201
             
     else:
         return jsonify({'error': 'Resident not found'}), 404
 
-# Get residents and their contacts
-@app.route('/contacts/residents', methods=['GET'])
+# Get residents
+@app.route('/residents', methods=['GET'])
 def get_residents_with_contacts():
     residents_with_contacts = []
 
     for resident in hotel.residents:
-        resident_info = {
-            'id': resident.id,
-            'name': resident.name,
-            'surname': resident.surname,
-            'contacts': []
-        }
         contacts = get_contacts(resident.id)
+        
         if 'error' in contacts:
-            resident_info['contacts'] = {'error': 'No contacts specified'}
+            resident_info = {
+                'id': resident.id,
+                'name': resident.name,
+                'surname': resident.surname,
+                'contacts': 'not specified'
+            }
         else:
-            resident_info['contacts'] = contacts
+            resident_info = {
+                'contacts': contacts
+            }
+        
         residents_with_contacts.append(resident_info)
 
-    return jsonify({'residents_with_contacts': residents_with_contacts})
-
-# Get residents
-@app.route('/residents', methods=['GET'])
-def get_residents_info():
-    residents_data = [
-        {
-            'id': resident.id,
-            'name': resident.name,
-            'surname': resident.surname
-        } 
-        for resident in hotel.residents
-    ]
-
-    return jsonify({'residents': residents_data})
-    
-
+    return jsonify({'residents_with_contacts': residents_with_contacts}), 200
 
 # Get rooms
 @app.route('/rooms', methods=['GET'])
@@ -115,7 +102,7 @@ def get_rooms_info():
         for room in hotel.rooms
     ]
 
-    return jsonify({'rooms': rooms_data})
+    return jsonify({'rooms': rooms_data}), 200
 
 # Get rooms by id
 @app.route('/rooms/<int:room_id>', methods=['GET'])
@@ -143,47 +130,51 @@ def get_resident_by_id(resident_id):
 
 @app.route('/residents', methods=['POST'])
 def add_resident():
-	data = request.json
-	name = data.get('name')
-	surname = data.get('surname')
-	room_id = data.get('room_id')
+    data = request.json
+    name = data.get('name')
+    surname = data.get('surname')
+    room_id = data.get('room_id')
 
-	# Check if the room has enough space
-	room = next((room for room in hotel.rooms if room.id == room_id), None)
-	if room:
-		if len(room.lives_here) >= room.size:
-			return jsonify({'error': 'Room is already full.'}), 400
+    # Check if the room has enough space
+    room = next((room for room in hotel.rooms if room.id == room_id), None)
+    if room:
+        if len(room.lives_here) >= room.size:
+            return jsonify({'error': 'Room is already full.'}), 422
 
-		# Call method to add resident
-		try:
-			success = hotel.move_in_new_resident(name, surname, room_id)
-			# Construct response with added resident information
-			response_data = {
-				'resident': {
-					'name': name,
-					'surname': surname,
-					'room_id': room_id
-				},
-				'message': 'Resident added to room successfully'
-			}
-			return jsonify(response_data), 200
-		except ValueError as e:
-			return jsonify({'error': str(e)}), 404
-    
-	else:
-		return jsonify({'error': f'Room with ID {room_id} not found'}), 404
+        # Call method to add resident
+        try:
+            resident_id = hotel.move_in_new_resident(name, surname, room_id)
 
-# Add a room
+            response_data = {
+                'message': f'Resident {resident_id} added to room {room_id} successfully'
+            }
+            return jsonify(response_data), 201
+        except ValueError as e:
+            return jsonify({'error': str(e)}), 404
+
+    else:
+        return jsonify({'error': f'Room with ID {room_id} not found'}), 404
+
 @app.route('/rooms', methods=['POST'])
 def add_room():
     data = request.json
     room_name = data.get('room_name')
     price = data.get('price')
     size = data.get('size')
+    
+    # Create a new room
+    new_room = hotel.create_new_room(room_name, price, size)
+    
+    # Check if the new room was successfully created
 
-    hotel.create_new_room(room_name, price, size)
-
-    return jsonify({'message': 'New room added'})
+    room_id = new_room.id
+    message = 'Room added successfully'
+        
+    response_data = {
+        'room_id': new_room.id,
+        'message': message
+    }
+    return jsonify(response_data), 201
 
 # Change a room's info
 @app.route('/rooms/<int:room_id>', methods=['PUT'])
@@ -193,39 +184,44 @@ def update_room(room_id):
     new_price = data.get('new_price')
     new_size = data.get('new_size')
     
-    person_in_room = hotel.get_resident_by_id(room_id)
-    
     # Check if a person is assigned to the room
+    person_in_room = hotel.get_person_in_room(room_id)
     if person_in_room:
-        return jsonify({'error': f'A person is assigned to room with ID {room_id}. Cannot update details.'}), 400
+        return jsonify({'error': f'A person is assigned to room with ID {room_id}. Cannot update details.'}), 422
     
     success = hotel.update_room(room_id, new_name, new_price, new_size)
     if success:
-        return jsonify({'message': 'Room updated successfully'}), 200
+        return jsonify({'message': f'Room with ID {room_id} updated successfully'}), 200
     else:
         return jsonify({'error': f'Room with ID {room_id} not found'}), 404
 
-# Change a resident's info
+# Move a resident into a new room
 @app.route('/residents/<int:resident_id>', methods=['PUT'])
 def move_resident(resident_id):
     data = request.json
     new_room_id = data.get('new_room_id')
+    
+    # Extract room_id from data
+    room_id = data.get('room_id')
 
+    residents_in_room = hotel.get_specific_resident_in_room(resident_id, new_room_id)
+    
     new_room = next((room for room in hotel.rooms if room.id == new_room_id), None)
     if not new_room:
         return jsonify({'error': 'Room not found with provided ID.'}), 404
 
-    if len(new_room.lives_here) >= new_room.size:  
-        return jsonify({'error': 'Room is already full. Cannot add resident.'}), 400
-        
-    for room in hotel.rooms:
-        if resident_id in room.lives_here:  
-            return jsonify({'error': 'Resident is already in the new room.'}), 400
+    if residents_in_room:
+        return jsonify({'error': f'Resident is already in room with ID {new_room_id}.'}), 409
 
+    # Check if the new room is full
+    if len(new_room.lives_here) >= new_room.size:
+        return jsonify({'error': 'Room {new_room_id} is already full. Cannot add resident.'}), 422
+    
+    # Move the resident to the new room
     success = hotel.move_resident_into_room(resident_id, new_room_id)
 
     if success:
-        return jsonify({'message': 'Resident moved to new room successfully'}), 200
+        return jsonify({'message': f'Resident {resident_id} moved to room {new_room_id} successfully'}), 200
     else:
         return jsonify({'error': 'Resident or room not found.'}), 404
 
@@ -236,7 +232,7 @@ def remove_resident(resident_id):
     removal_result = hotel.remove_resident_from_room(resident_id)
 
     if removal_result:
-        return jsonify({'message': 'Resident removed from room successfully'}), 200
+        return '', 204
     else:
         return (
             jsonify({'error': f'Resident with ID {resident_id} '
@@ -247,8 +243,7 @@ def remove_resident(resident_id):
 @app.route('/rooms/<int:room_id>', methods=['DELETE'])
 def remove_room(room_id):
     if hotel.remove_room(room_id):
-        return jsonify({'message': f'Room with ID {room_id} '
-                            'and its residents removed successfully'}), 200
+        return '', 204
     else:
         return jsonify({'error': f'Room with ID {room_id} not found'}), 404
 
@@ -276,7 +271,7 @@ def index():
             room_info['residents'].append(resident_info)
         hotel_data.append(room_info)
 
-    return jsonify({'hotel': hotel_data})
+    return jsonify({'hotel': hotel_data}), 200
 
 if __name__ == '__main__':
     app.run(debug=True, host='0.0.0.0', port=80)

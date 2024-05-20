@@ -4,13 +4,32 @@
 
 Launch:
 
-```git clone```
+```git clone --recurse https://github.com/emiivo/hotel_2.git```
 
 ```cd hotel_service```
 
 ```docker-compose up```
 
-# Create:
+
+# NEW FUNCTIONS WITH CONTACTS:
+
+# Get residents and their contacts:
+
+```curl http://localhost:80/residents```
+
+# Add contacts to a resident:
+
+```curl -X POST -H "Content-Type: application/json" -d '{"number": "123456789", "email": "john@example.com"}' http://localhost:80/contacts/residents/1```
+
+# Get a specific contact by resident's id:
+
+```curl -X GET http://localhost:80/contacts/residents/1```
+
+# See the entire hotel - with contacts:
+
+```curl http://localhost:80/```
+
+# CREATE:
 
 Add a resident. Only works when the room capacity is not at the limit.
 
@@ -21,13 +40,13 @@ Create a new room.
 ```curl -X POST -H "Content-Type: application/json" -d '{"room_name": "New room", "price": 100, "size": 2}' http://localhost:80/rooms```
 
 
-# Read:
+# READ:
 
 Rooms:
 
 ```curl http://localhost:80/rooms```
 
-Residents:
+Residents - now with contacts:
 
 ```curl http://localhost:80/residents```
 
@@ -39,7 +58,7 @@ Resident name and surname by id:
 
 ```curl http://localhost:80/residents/3```
 
-# Update:
+# UPDATE:
 
 Update room info - name, price, size:
 
@@ -59,25 +78,6 @@ Remove a room and its residents (number at the end is room id):
 Remove a resident from a room (number at the end is resident id):
 
 ```curl -X DELETE http://localhost:80/residents/1```
-
-# NEW FUNCTIONS WITH CONTACTS:
-
-Get all contacts:
-
-```curl -X GET http://localhost:80/contacts```
-
-# Add contacts to a resident:
-
-```curl -X POST -H "Content-Type: application/json" -d '{"number": "123456789", "email": "john@example.com"}' http://localhost:80/contacts/residents/1```
-
-# Get a specific contact by resident's id:
-
-```curl -X GET http://localhost:80/contacts/residents/1```
-
-
-# See the entire hotel - with contacts:
-
-```curl http://localhost:80/```
 
 
 
