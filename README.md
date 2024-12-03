@@ -1,5 +1,6 @@
 # hotel_2
-
+A simple hotel service built using Python and Docker.
+This project expands the functionality of the first web service by adding contact management for residents, utilizing another student's assignment for contact handling.
 # Usage:
 
 Launch:
